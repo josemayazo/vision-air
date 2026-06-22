@@ -1,0 +1,287 @@
+"""
+🚀 GUÍA RÁPIDA - Dusty Monitor API
+
+Copia y pega estos comandos para empezar en 5 minutos.
+"""
+
+# ============================================================
+# 1️⃣ SETUP INICIAL (Primera vez)
+# ============================================================
+
+# Ir al directorio
+cd c:\Users\jose_\Documents\projects\vision_air\vision_air_api
+
+# Crear entorno virtual
+python -m venv .venv
+
+# Activar (Windows)
+.venv\Scripts\activate
+
+# Instalar dependencias
+pip install -r requirements.txt
+
+# Crear archivo .env
+cp .env.example .env
+
+# ⚠️ IMPORTANTE: Edita .env con tus credenciales PostgreSQL
+# DB_PASSWORD=tu_contraseña_aqui
+
+
+# ============================================================
+# 2️⃣ CREAR BASE DE DATOS
+# ============================================================
+
+# Opción A: Con comando createdb (si está en PATH)
+createdb -U postgres dusty_monitor
+
+# Opción B: Con psql (si createdb no está disponible)
+psql -U postgres -c "CREATE DATABASE dusty_monitor;"
+
+# Ejecutar script de migraciones
+psql -U postgres -d dusty_monitor -f migrations/001_initial_schema.sql
+
+# Verificar que se crearon las tablas
+psql -U postgres -d dusty_monitor -c "\\dt"
+
+
+# ============================================================
+# 3️⃣ INICIAR LA API
+# ============================================================
+
+# Opción A: Desde el script main.py
+python main.py
+
+# Opción B: Con uvicorn directamente
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
+# Opción C: Para producción (con Gunicorn)
+gunicorn -w 4 -b 0.0.0.0:8000 app.main:app
+
+
+# ============================================================
+# 4️⃣ ACCEDER A LA API
+# ============================================================
+
+# 🌐 En el navegador:
+http://localhost:8000          # Home
+http://localhost:8000/docs     # Swagger UI (Interactivo)
+http://localhost:8000/redoc    # ReDoc (Documentación)
+
+# 📊 Verificar salud
+curl http://localhost:8000/health
+
+
+# ============================================================
+# 5️⃣ EJEMPLOS DE REQUESTS
+# ============================================================
+
+# 1. Crear dispositivo
+curl -X POST "http://localhost:8000/api/v1/dispositivos" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": "ESP32_AULA_1",
+    "nombre": "Sensor Aula de Ciencias",
+    "ubicacion": "Laboratorio de Biología",
+    "limite_co2": 900,
+    "limite_pm25": 25
+  }'
+
+# 2. Listar dispositivos
+curl "http://localhost:8000/api/v1/dispositivos"
+
+# 3. Registrar lectura (ESP32 → API)
+curl -X POST "http://localhost:8000/api/v1/lecturas" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "dispositivo_id": "ESP32_AULA_1",
+    "temperatura": 22.5,
+    "humedad": 55.3,
+    "pm1_0": 5.2,
+    "pm2_5": 12.4,
+    "pm4_0": 18.7,
+    "pm10": 24.3,
+    "voc": 150,
+    "co2": 850
+  }'
+
+# 4. Obtener última lectura
+curl "http://localhost:8000/api/v1/lecturas/actual?dispositivo_id=ESP32_AULA_1"
+
+# 5. Obtener estadísticas
+curl "http://localhost:8000/api/v1/lecturas/estadisticas?dispositivo_id=ESP32_AULA_1&filtro=hoy"
+
+# 6. Obtener alertas recientes
+curl "http://localhost:8000/api/v1/alertas/recientes"
+
+# 7. Resolver una alerta
+curl -X PATCH "http://localhost:8000/api/v1/alertas/1/resolver"
+
+# 8. Crear misión
+curl -X POST "http://localhost:8000/api/v1/misiones" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "titulo": "Cuidar el aire del aula",
+    "categoria": "STEM Ciencias",
+    "descripcion": "Mantén el CO2 bajo durante una semana",
+    "progreso": 0
+  }'
+
+# 9. Obtener misiones activas
+curl "http://localhost:8000/api/v1/misiones"
+
+# 10. Actualizar progreso de misión
+curl -X PATCH "http://localhost:8000/api/v1/misiones/1/progreso" \
+  -H "Content-Type: application/json" \
+  -d '{"progreso": 50}'
+
+
+# ============================================================
+# 6️⃣ TESTING Y DEBUGGING
+# ============================================================
+
+# Ver logs en tiempo real
+# (La API mostrará logs en la consola)
+
+# Ejecutar tests
+pytest
+
+# Linting (verificar código)
+flake8 app/
+
+# Formatear código
+black app/
+
+# Ordenar imports
+isort app/
+
+
+# ============================================================
+# 7️⃣ TROUBLESHOOTING
+# ============================================================
+
+# Error: "Could not connect to database"
+# → Verifica que PostgreSQL está corriendo
+# → Revisa credenciales en .env
+# → Intenta: psql -U postgres -d dusty_monitor
+
+# Error: "Port 8000 already in use"
+# → Cambia puerto: uvicorn app.main:app --port 8001
+# → O mata el proceso: lsof -i :8000 | grep LISTEN | awk '{print $2}' | xargs kill -9
+
+# Error: "ModuleNotFoundError"
+# → Activa entorno: .venv\Scripts\activate
+# → Reinstala deps: pip install -r requirements.txt
+
+# Error: "Database does not exist"
+# → Crea BD: psql -U postgres -c "CREATE DATABASE dusty_monitor;"
+# → Ejecuta migraciones: psql -U postgres -d dusty_monitor -f migrations/001_initial_schema.sql
+
+
+# ============================================================
+# 8️⃣ ESTRUCTURA DE ARCHIVOS
+# ============================================================
+
+"""
+vision_air_api/
+├── app/
+│   ├── main.py              ← Punto de entrada
+│   ├── config.py            ← Configuración
+│   ├── database.py          ← Conexión BD
+│   ├── models.py            ← Modelos ORM
+│   ├── schemas.py           ← Validación Pydantic
+│   ├── crud.py              ← Operaciones CRUD
+│   ├── routers/
+│   │   ├── dispositivos.py
+│   │   ├── lecturas.py
+│   │   ├── alertas.py
+│   │   └── misiones.py
+│   └── utils/
+│       └── alerts.py
+├── migrations/
+│   └── 001_initial_schema.sql
+├── requirements.txt
+├── .env.example
+├── .gitignore
+├── README.md
+├── ARQUITECTURA.md
+├── PLAN.md
+└── main.py
+"""
+
+
+# ============================================================
+# 9️⃣ DOCUMENTACIÓN
+# ============================================================
+
+# 📖 README.md
+# → Guía completa de instalación
+# → Ejemplos detallados
+# → Troubleshooting
+
+# 🏗️  ARQUITECTURA.md
+# → Diseño de la aplicación
+# → Flujos de datos
+# → Componentes
+
+# 📋 PLAN.md
+# → Checklist de tareas
+# → Roadmap
+# → Tecnologías
+
+
+# ============================================================
+# 🔟 TIPS & TRICKS
+# ============================================================
+
+# Usar Swagger UI para testing interactivo
+# → http://localhost:8000/docs
+# → Prueba todos los endpoints sin escribir curl
+
+# Variables de entorno útiles
+# DEBUG=True          → Muestra queries SQL
+# LOG_LEVEL=DEBUG     → Logs más detallados
+
+# Crear muchas misiones de ejemplo
+for i in {1..5}; do
+  curl -X POST "http://localhost:8000/api/v1/misiones" \
+    -H "Content-Type: application/json" \
+    -d "{\"titulo\":\"Misión $i\",\"categoria\":\"STEM\",\"progreso\":0}"
+done
+
+# Exportar datos de la BD
+pg_dump -U postgres dusty_monitor > backup.sql
+
+# Importar datos
+psql -U postgres dusty_monitor < backup.sql
+
+
+# ============================================================
+# 🎯 PRÓXIMAS PRUEBAS
+# ============================================================
+
+# 1. Registra 5 dispositivos diferentes
+# 2. Envía 100+ lecturas para probar estad
+# 3. Genera alertas superando límites
+# 4. Crea misiones y actualiza progreso
+# 5. Verifica alertas recientes
+# 6. Prueba paginación y filtros
+# 7. Revisa documentación Swagger
+
+
+# ============================================================
+# ✅ CHECKLIST FINAL
+# ============================================================
+
+# [ ] Entorno virtual creado y activado
+# [ ] Dependencias instaladas (pip install -r requirements.txt)
+# [ ] .env configurado con credenciales
+# [ ] Base de datos creada
+# [ ] Migraciones ejecutadas
+# [ ] API corriendo (python main.py)
+# [ ] Swagger UI accesible (http://localhost:8000/docs)
+# [ ] Registré primer dispositivo
+# [ ] Envié primera lectura
+# [ ] Verifiqué estadísticas
+
+# ¡LISTO PARA DESARROLLAR! 🎉
+"""
